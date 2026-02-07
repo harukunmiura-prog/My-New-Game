@@ -2,93 +2,107 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Jujutsu: Complete System</title>
+    <title>Jujutsu: Stone & Battle Loop</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; text-align: center; overflow: hidden; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; text-align: center; }
         .scene { display: none; width: 800px; height: 550px; margin: 10px auto; border: 4px solid #333; position: relative; background: #0a0a0f; }
         .active { display: flex; flex-direction: column; }
         
-        /* ロビー & UI */
-        .menu-btn { padding: 12px 25px; margin: 10px; font-size: 18px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; }
-        .back-btn { position: absolute; top: 10px; left: 10px; padding: 5px 15px; background: #555; color: white; border: none; cursor: pointer; z-index: 10; }
+        /* 共通UI */
+        .status-header { background: #222; padding: 10px; display: flex; justify-content: space-around; font-weight: bold; }
+        .ishi-count { color: #f1c40f; font-size: 20px; }
+        .menu-btn { padding: 12px 25px; margin: 10px; cursor: pointer; background: #e74c3c; border: none; color: white; border-radius: 5px; }
 
-        /* ガチャ・編成 */
-        .character-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px; }
-        .char-card { border: 2px solid #444; padding: 10px; cursor: pointer; background: #222; }
+        /* キャラカード */
+        .character-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px; }
+        .char-card { border: 2px solid #444; padding: 10px; background: #222; cursor: pointer; border-radius: 5px; }
         .char-card.selected { border-color: #00d4ff; background: #003344; }
 
-        /* バトル画面用 */
-        #battle-field { height: 350px; position: relative; background: linear-gradient(to bottom, #1a1a2e, #000); border-bottom: 2px solid #444; }
-        .unit { position: absolute; transition: 0.3s; text-align: center; }
-        .bars { width: 80px; height: 6px; background: #222; margin: 2px auto; border-radius: 3px; overflow: hidden; }
+        /* バトル */
+        #battle-field { height: 320px; position: relative; background: #111; border-bottom: 2px solid #444; }
+        .unit { position: absolute; transition: 0.3s; width: 100px; }
+        .bar-container { width: 80px; height: 6px; background: #333; margin: 2px auto; border-radius: 3px; overflow: hidden; }
         .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
-        #ui-bottom { height: 200px; background: #111; display: grid; grid-template-columns: repeat(3, 1fr) 120px; gap: 10px; padding: 10px; }
+        .mp-fill { height: 100%; background: #00d4ff; width: 0%; transition: 0.3s; }
+        
+        #ui-bottom { height: 200px; background: #1a1a1a; display: grid; grid-template-columns: repeat(3, 1fr) 120px; gap: 10px; padding: 10px; }
     </style>
 </head>
 <body>
 
+    <div class="status-header">
+        <div>呪術高専 管理画面</div>
+        <div class="ishi-count">所持イシ: <span id="ishi-val">5</span> 個</div>
+    </div>
+
     <div id="scene-lobby" class="scene active">
-        <h1>呪術高専：ロビー</h1>
+        <h1>ロビー</h1>
         <div style="margin-top: 100px;">
-            <button class="menu-btn" onclick="changeScene('scene-gacha')">ガチャ（キャラ入手）</button>
-            <button class="menu-btn" onclick="changeScene('scene-party')">編成（3人選択）</button>
-            <button id="start-battle-btn" class="menu-btn" style="background:#2ecc71;" onclick="startBattle()">任務開始（バトル）</button>
+            <button class="menu-btn" onclick="changeScene('scene-gacha')">ガチャ (1個消費)</button>
+            <button class="menu-btn" onclick="changeScene('scene-party')">チーム編成</button>
+            <button class="menu-btn" style="background:#2ecc71;" onclick="startBattle()">任務開始 (勝利で1個獲得)</button>
         </div>
     </div>
 
     <div id="scene-gacha" class="scene">
-        <button class="back-btn" onclick="changeScene('scene-lobby')">戻る</button>
+        <button onclick="changeScene('scene-lobby')">戻る</button>
         <h2>特級ガチャ</h2>
-        <div id="gacha-res" style="font-size: 80px; margin: 50px;">？</div>
-        <button class="menu-btn" onclick="pullGacha()">1回引く</button>
+        <div id="gacha-res" style="font-size: 80px; margin: 40px;">？</div>
+        <button class="menu-btn" onclick="pullGacha()">イシを1個使って引く</button>
     </div>
 
     <div id="scene-party" class="scene">
-        <button class="back-btn" onclick="changeScene('scene-lobby')">戻る</button>
-        <h2>チーム編成</h2>
+        <button onclick="changeScene('scene-lobby')">戻る</button>
+        <h2>チーム編成 (3人選択)</h2>
         <div id="my-chars" class="character-list"></div>
-        <div id="party-info">選択中: 0 / 3</div>
     </div>
 
     <div id="scene-battle" class="scene">
         <div id="battle-field">
-            <div id="boss" class="unit" style="top:50px; right:100px; scale:1.5;">
-                <div class="bars"><div id="hp-e" class="hp-fill"></div></div>
+            <div id="boss" class="unit" style="top:40px; right:80px; scale:1.4;">
+                <div class="bar-container"><div id="hp-e" class="hp-fill"></div></div>
                 <div style="font-size:60px">🌋</div>
             </div>
-            <div id="p-units"></div> </div>
+            <div id="p-units"></div>
+        </div>
         <div id="ui-bottom">
             <div id="cmd-0"></div><div id="cmd-1"></div><div id="cmd-2"></div>
-            <button id="go-btn" style="background:#e74c3c; color:white; border:none; font-weight:bold; cursor:pointer;" onclick="runBattleTurn()">祓払</button>
+            <button id="go-btn" style="background:#e74c3c; color:white; border:none;" onclick="runBattleTurn()">祓払</button>
         </div>
     </div>
 
 <script>
-    // --- データ ---
     const allChars = [
-        { id: 'itadori', name: '虎杖', emoji: '🤜', hp: 150 },
-        { id: 'gojo', name: '五条', emoji: '😎', hp: 500 },
-        { id: 'fushiguro', name: '伏黒', emoji: '🐺', hp: 120 },
-        { id: 'nanami', name: '七海', emoji: '📏', hp: 140 },
-        { id: 'kugisaki', name: '釘崎', emoji: '🔨', hp: 110 }
+        { id: 'i', name: '虎杖', emoji: '🤜', hp: 150 },
+        { id: 'g', name: '五条', emoji: '😎', hp: 400 },
+        { id: 'f', name: '伏黒', emoji: '🐺', hp: 120 },
+        { id: 'n', name: '七海', emoji: '📏', hp: 140 }
     ];
-    let inventory = ['itadori'];
-    let party = [];
-    let enemyHP = 1000;
 
-    // --- システム ---
+    let ishi = 5;
+    let inventory = ['i']; // 最初は虎杖のみ
+    let party = [];
+    let battleUnits = []; // バトル中のステータス用
+    let bossHP = 1000;
+
+    function updateIshi() { document.getElementById('ishi-val').innerText = ishi; }
+
     function changeScene(id) {
         document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         if(id === 'scene-party') renderParty();
     }
 
+    // --- ガチャ ---
     function pullGacha() {
+        if(ishi < 1) return alert("イシが足りません！");
+        ishi--; updateIshi();
         const res = allChars[Math.floor(Math.random()*allChars.length)];
         document.getElementById('gacha-res').innerText = res.emoji;
         if(!inventory.includes(res.id)) inventory.push(res.id);
     }
 
+    // --- 編成 ---
     function renderParty() {
         const list = document.getElementById('my-chars');
         list.innerHTML = '';
@@ -104,44 +118,71 @@
             };
             list.appendChild(card);
         });
-        document.getElementById('party-info').innerText = `選択中: ${party.length} / 3`;
     }
 
-    // --- バトル開始処理（合体のキモ！） ---
+    // --- バトル ---
     function startBattle() {
-        if(party.length < 1) return alert("まずは編成でキャラを選んでね！");
-        enemyHP = 1000;
-        changeScene('scene-battle');
+        if(party.length === 0) return alert("編成でキャラを選んでください！");
+        bossHP = 1000;
+        battleUnits = party.map(id => {
+            const data = allChars.find(c => c.id === id);
+            return { ...data, curHP: data.hp, mp: 0 };
+        });
         
+        changeScene('scene-battle');
+        renderBattle();
+    }
+
+    function renderBattle() {
         const field = document.getElementById('p-units');
         field.innerHTML = '';
-        party.forEach((id, i) => {
-            const data = allChars.find(c => c.id === id);
+        battleUnits.forEach((u, i) => {
             field.innerHTML += `
-                <div id="unit-${i}" class="unit" style="bottom:${100 - i*30}px; left:${80 + i*100}px;">
-                    <div class="bars"><div id="hp-p${i}" class="hp-fill"></div></div>
-                    <div style="font-size:50px">${data.emoji}</div>
+                <div id="u-${i}" class="unit" style="bottom:${100 - i*30}px; left:${60 + i*110}px;">
+                    <div class="bar-container"><div id="hp-p${i}" class="hp-fill" style="width:${u.curHP/u.hp*100}%"></div></div>
+                    <div class="bar-container"><div id="mp-p${i}" class="mp-fill" style="width:${u.mp}%"></div></div>
+                    <div style="font-size:50px">${u.emoji}</div>
                 </div>`;
             document.getElementById(`cmd-${i}`).innerHTML = `
-                <div style="font-size:12px">${data.name}</div>
-                <select id="sel-${i}"><option value="40">通常</option><option value="120">術式</option></select>`;
+                <div style="font-size:12px">${u.name}</div>
+                <select id="sel-${i}">
+                    <option value="atk">呪撃 (+20MP)</option>
+                    <option value="skill" ${u.mp < 50 ? 'disabled' : ''}>術式 (50MP)</option>
+                </select>`;
         });
+        document.getElementById('hp-e').style.width = (bossHP/10) + "%";
     }
 
     async function runBattleTurn() {
         document.getElementById('go-btn').disabled = true;
-        for(let i=0; i<party.length; i++) {
-            const dmg = parseInt(document.getElementById(`sel-${i}`).value);
-            enemyHP -= dmg;
-            document.getElementById('hp-e').style.width = (Math.max(0, enemyHP)/10) + "%";
-            // 簡易アニメ
-            document.getElementById(`unit-${i}`).style.transform = "translateX(50px)";
+        for(let i=0; i<battleUnits.length; i++) {
+            const u = battleUnits[i];
+            const move = document.getElementById(`sel-${i}`).value;
+            let dmg = 0;
+
+            if(move === 'atk') {
+                dmg = 40; u.mp = Math.min(100, u.mp + 20);
+            } else {
+                dmg = 150; u.mp -= 50;
+            }
+            
+            bossHP = Math.max(0, bossHP - dmg);
+            document.getElementById(`u-${i}`).style.transform = "translateX(40px)";
+            renderBattle();
             await new Promise(r => setTimeout(r, 400));
-            document.getElementById(`unit-${i}`).style.transform = "";
+            document.getElementById(`u-${i}`).style.transform = "";
         }
-        alert("敵の反撃（簡易版）！");
+
+        if(bossHP <= 0) {
+            alert("勝利！イシを1個獲得しました！");
+            ishi++; updateIshi();
+            changeScene('scene-lobby');
+        } else {
+            alert("敵の攻撃！全員に20ダメージ！");
+            battleUnits.forEach(u => u.curHP = Math.max(0, u.curHP - 20));
+            renderBattle();
+        }
         document.getElementById('go-btn').disabled = false;
-        if(enemyHP <= 0) { alert("勝利！ロビーに戻ります"); changeScene('scene-lobby'); }
     }
 </script>
 </body>
