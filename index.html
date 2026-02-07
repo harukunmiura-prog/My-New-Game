@@ -2,159 +2,142 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>ファンパレ風：共闘プロトタイプ</title>
+    <title>Jujutsu Battle: Professional Edition</title>
     <style>
-        body { background: #05050a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; overflow: hidden; }
-        #game-screen { width: 800px; height: 500px; border: 2px solid #333; position: relative; background: radial-gradient(circle, #1a1a2e, #05050a); }
+        :root { --p-color: #00d4ff; --e-color: #ff4e50; }
+        body { background: #050505; color: white; font-family: 'Meiryo', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        #game-board { width: 850px; height: 500px; background: #111; position: relative; border: 4px solid #333; overflow: hidden; }
         
-        /* ステータス周り */
-        .status-box { background: rgba(0,0,0,0.8); border-left: 4px solid #3498db; padding: 8px; margin-bottom: 5px; width: 180px; font-size: 13px; }
-        .hp-bar-bg { width: 100%; height: 8px; background: #222; margin-top: 4px; border-radius: 4px; }
-        .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
-        .buff-badge { display: inline-block; font-size: 10px; background: #f1c40f; color: black; padding: 1px 4px; border-radius: 3px; margin-top: 5px; display: none; }
+        /* キャラクターエリア */
+        .unit { position: absolute; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; width: 100px; }
+        .unit-icon { font-size: 60px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        .hp-gauge { width: 80px; height: 6px; background: #333; margin: 5px auto; border-radius: 3px; }
+        .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
+        
+        /* 配置 */
+        #p0 { bottom: 150px; left: 100px; }
+        #p1 { bottom: 120px; left: 220px; }
+        #p2 { bottom: 90px; left: 340px; }
+        #boss { top: 100px; right: 150px; scale: 1.5; }
 
-        /* キャラ配置 */
-        .unit { position: absolute; font-size: 70px; transition: 0.3s; text-align: center; }
-        .unit-name { font-size: 14px; display: block; margin-top: -10px; }
-        #p1 { bottom: 150px; left: 100px; } /* アタッカー */
-        #p2 { bottom: 120px; left: 240px; } /* サポーター */
-        #enemy { top: 120px; right: 120px; font-size: 100px; }
+        /* UIエリア */
+        #ui-panel { width: 850px; background: #1a1a1a; padding: 15px; display: grid; grid-template-columns: repeat(3, 1fr) 150px; gap: 10px; border: 2px solid #333; }
+        .char-cmd { background: #252525; padding: 8px; border-radius: 5px; border-top: 3px solid var(--p-color); }
+        .char-cmd.done { border-top-color: #555; opacity: 0.6; }
+        select { width: 100%; padding: 5px; background: #333; color: white; border: none; margin-top: 5px; }
+        
+        #go-btn { background: var(--e-color); color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; font-size: 20px; }
+        #go-btn:disabled { background: #444; }
 
-        /* UI */
-        #ui-panel { position: absolute; bottom: 0; width: 100%; height: 130px; background: #111; border-top: 2px solid #444; display: flex; }
-        #log-area { flex: 1; padding: 15px; font-size: 14px; border-right: 1px solid #333; overflow-y: auto; color: #ccc; }
-        #cmd-area { width: 350px; padding: 10px; display: flex; flex-direction: column; gap: 10px; justify-content: center; }
-        .btn-row { display: flex; gap: 5px; justify-content: center; }
-        button { flex: 1; padding: 8px; cursor: pointer; font-weight: bold; border: none; border-radius: 4px; }
-        .p1-btn { background: #e74c3c; color: white; }
-        .p2-btn { background: #3498db; color: white; }
-        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        /* ログ演出 */
+        #battle-log { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 14px; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div id="game-screen">
-    <div style="position:absolute; top:20px; right:20px;">
-        <div class="status-box" style="border-color: #e74c3c;">
-            <span>特級呪霊</span>
-            <div class="hp-bar-bg"><div id="e-hp" class="hp-bar-fill"></div></div>
-        </div>
+<div id="game-board">
+    <div id="battle-log">コマンドを選択してください...</div>
+    <div id="boss" class="unit">
+        <div class="hp-gauge"><div id="hp-e" class="hp-fill"></div></div>
+        <div class="unit-icon">🌋</div>
     </div>
+    <div id="p0" class="unit"><div class="hp-gauge"><div id="hp-p0" class="hp-fill"></div></div><div class="unit-icon">👊</div></div>
+    <div id="p1" class="unit"><div class="hp-gauge"><div id="hp-p1" class="hp-fill"></div></div><div class="unit-icon">👓</div></div>
+    <div id="p2" class="unit"><div class="hp-gauge"><div id="hp-p2" class="hp-fill"></div></div><div class="unit-icon">🏥</div></div>
+</div>
 
-    <div style="position:absolute; top:20px; left:20px;">
-        <div class="status-box">
-            <span>アタッカー</span>
-            <div class="hp-bar-bg"><div id="p1-hp" class="hp-bar-fill"></div></div>
-            <div id="p1-buff" class="buff-badge">攻撃UP中</div>
-        </div>
-        <div class="status-box" style="border-color: #9b59b6;">
-            <span>サポーター</span>
-            <div class="hp-bar-bg"><div id="p2-hp" class="hp-bar-fill"></div></div>
-        </div>
-    </div>
-
-    <div id="enemy" class="unit">👿</div>
-    <div id="p1" class="unit">⚔️<span class="unit-name">アタッカー</span></div>
-    <div id="p2" class="unit">🪄<span class="unit-name">サポーター</span></div>
-
-    <div id="ui-panel">
-        <div id="log-area">バトルの準備が整った！</div>
-        <div id="cmd-area">
-            <div class="btn-row">
-                <button class="p1-btn" onclick="p1Action()">アタッカー：呪撃</button>
-            </div>
-            <div class="btn-row">
-                <button class="p2-btn" onclick="p2Buff()">サポーター：鼓舞 (バフ)</button>
-                <button class="p2-btn" onclick="p2Heal()">サポーター：反転術式 (回復)</button>
-            </div>
-        </div>
-    </div>
+<div id="ui-panel">
+    <div id="cmd-0" class="char-cmd"><strong>アタッカー</strong><select id="sel-0"><option value="atk">呪撃</option><option value="skill">黒閃 (消費20)</option></select></div>
+    <div id="cmd-1" class="char-cmd"><strong>バフ担当</strong><select id="sel-1"><option value="buff">戦意高揚</option></select></div>
+    <div id="cmd-2" class="char-cmd"><strong>ヒーラー</strong><select id="sel-2"><option value="heal">反転術式</option></select></div>
+    <button id="go-btn" onclick="startPhase()">実行</button>
 </div>
 
 <script>
-    let p1HP = 100, p2HP = 100, eHP = 200;
-    let isBuffed = false;
-    let turnCount = 0;
-
-    function log(msg) {
-        const l = document.getElementById('log-area');
-        l.innerHTML = `<div>${msg}</div>` + l.innerHTML;
-    }
-
-    function updateUI() {
-        document.getElementById('p1-hp').style.width = p1HP + "%";
-        document.getElementById('p2-hp').style.width = p2HP + "%";
-        document.getElementById('e-hp').style.width = (eHP / 2) + "%";
-        document.getElementById('p1-buff').style.display = isBuffed ? "inline-block" : "none";
-        
-        if (eHP <= 0) {
-            log("<strong>勝利！呪霊を退けた！</strong>");
-            document.getElementById('enemy').style.display = 'none';
-            disableButtons(true);
+    // --- 1. 設計図（クラス） ---
+    class Unit {
+        constructor(id, name, hp, type) {
+            this.id = id;
+            this.name = name;
+            this.hp = hp;
+            this.maxHp = hp;
+            this.type = type; // 'player' or 'enemy'
+            this.buff = 1.0;
+        }
+        updateHP() {
+            const fill = document.getElementById(`hp-${this.id}`);
+            fill.style.width = (this.hp / this.maxHp * 100) + "%";
         }
     }
 
-    function disableButtons(bool) {
-        const btns = document.querySelectorAll('button');
-        btns.forEach(b => b.disabled = bool);
+    // --- 2. 初期化 ---
+    const players = [
+        new Unit("p0", "アタッカー", 150, "player"),
+        new Unit("p1", "バフ担当", 100, "player"),
+        new Unit("p2", "ヒーラー", 80, "player")
+    ];
+    const enemy = new Unit("e", "特級呪霊", 1000, "enemy");
+
+    const log = (msg) => document.getElementById('battle-log').innerText = msg;
+
+    // --- 3. バトルロジック（ここが難しい！） ---
+    async function startPhase() {
+        document.getElementById('go-btn').disabled = true;
+
+        // 味方の行動
+        for (let i = 0; i < players.length; i++) {
+            if (enemy.hp <= 0) break;
+            const action = document.getElementById(`sel-${i}`).value;
+            await executeAction(players[i], action);
+        }
+
+        // 敵の行動
+        if (enemy.hp > 0) {
+            await new Promise(r => setTimeout(r, 800));
+            await enemyAction();
+        }
+
+        document.getElementById('go-btn').disabled = false;
+        log("次のターンを選択してください...");
     }
 
-    // アタッカーの行動
-    async function p1Action() {
-        disableButtons(true);
-        let dmg = isBuffed ? 50 : 25;
-        eHP = Math.max(0, eHP - dmg);
-        log(`アタッカーの攻撃！敵に ${dmg} ダメージ！`);
-        animate('p1', 50);
-        isBuffed = false; // バフは1回で消費
-        updateUI();
-        if (eHP > 0) setTimeout(enemyTurn, 1000);
-    }
-
-    // サポーターの行動（バフ）
-    async function p2Buff() {
-        disableButtons(true);
-        isBuffed = true;
-        log("サポーターの鼓舞！アタッカーの次の一撃が強化された！");
-        animate('p2', 0, -20);
-        updateUI();
-        setTimeout(enemyTurn, 1000);
-    }
-
-    // サポーターの行動（回復）
-    async function p2Heal() {
-        disableButtons(true);
-        p1HP = Math.min(100, p1HP + 30);
-        p2HP = Math.min(100, p2HP + 30);
-        log("反転術式！味方全員のHPが回復！");
-        animate('p2', 0, -20);
-        updateUI();
-        setTimeout(enemyTurn, 1000);
-    }
-
-    function enemyTurn() {
-        const target = Math.random() > 0.5 ? "p1" : "p2";
-        log(`敵の攻撃！${target === "p1" ? "アタッカー" : "サポーター"}が狙われた！`);
-        animate('enemy', -50);
+    async function executeAction(actor, type) {
+        log(`${actor.name}の行動！`);
+        const el = document.getElementById(actor.id);
         
-        if (target === "p1") p1HP = Math.max(0, p1HP - 20);
-        else p2HP = Math.max(0, p2HP - 20);
-        
-        updateUI();
-        setTimeout(() => {
-            if (p1HP > 0 || p2HP > 0) {
-                disableButtons(false);
-                log("味方のターン！");
-            } else {
-                log("全滅しました...");
-            }
-        }, 800);
+        if (type === 'atk' || type === 'skill') {
+            el.style.transform = "translateX(50px)";
+            let dmg = type === 'atk' ? 40 : 120;
+            dmg = Math.floor(dmg * actor.buff);
+            enemy.hp = Math.max(0, enemy.hp - dmg);
+            enemy.updateHP();
+            actor.buff = 1.0; // バフ消費
+            log(`${enemy.name}に ${dmg} のダメージ！`);
+        } else if (type === 'buff') {
+            el.style.transform = "translateY(-20px)";
+            players[0].buff = 2.0;
+            log(`アタッカーの力を強化！`);
+        } else if (type === 'heal') {
+            el.style.transform = "translateY(-20px)";
+            players.forEach(p => { p.hp = Math.min(p.maxHp, p.hp + 30); p.updateHP(); });
+            log(`味方全員を回復！`);
+        }
+
+        await new Promise(r => setTimeout(r, 600));
+        el.style.transform = "translate(0,0)";
     }
 
-    function animate(id, x = 0, y = 0) {
-        const el = document.getElementById(id);
-        el.style.transform = `translate(${x}px, ${y}px)`;
-        setTimeout(() => el.style.transform = 'translate(0, 0)', 150);
+    async function enemyAction() {
+        log(`敵の攻撃！`);
+        const target = players[Math.floor(Math.random() * players.length)];
+        document.getElementById('boss').style.transform = "translateX(-100px)";
+        
+        target.hp = Math.max(0, target.hp - 40);
+        target.updateHP();
+        
+        await new Promise(r => setTimeout(r, 600));
+        document.getElementById('boss').style.transform = "translateX(0)";
+        log(`${target.name}は 40 ダメージ受けた！`);
     }
 </script>
 </body>
