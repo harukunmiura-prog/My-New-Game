@@ -2,97 +2,186 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Jujutsu Battle: Ultimate Stage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jujutsu Battle: Advanced</title>
     <style>
-        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; margin: 0; overflow: hidden; }
-        #world { width: 800px; height: 500px; background: #050505; position: relative; border: 5px solid #333; }
+        :root { --main-bg: #0a0a0f; --panel-bg: rgba(20, 20, 30, 0.95); --hp-color: #2ecc71; --mp-color: #00d4ff; }
+        body { background: #000; color: #fff; font-family: 'Helvetica Neue', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; }
         
-        /* 必殺技カットイン */
-        #cut-in { 
-            position: absolute; width: 100%; top: 40%; background: rgba(255,0,0,0.8); 
-            color: white; font-size: 50px; text-align: center; transform: scaleX(0); 
-            transition: 0.5s; z-index: 100; font-style: italic;
+        #game-container { 
+            width: 800px; height: 450px; background: linear-gradient(to bottom, #1a1a2e, #050505);
+            position: relative; border: 4px solid #333; overflow: hidden; box-shadow: 0 0 30px rgba(0,212,255,0.2);
         }
-        .cut-in-active { transform: scaleX(1) !important; }
 
         /* キャラクター */
-        .char { position: absolute; transition: 0.3s; text-align: center; }
-        .hp-outer { width: 60px; height: 4px; background: #222; margin-bottom: 2px; }
-        .hp-inner { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
+        .char { position: absolute; transition: 0.3s cubic-bezier(0.17, 0.67, 0.83, 0.67); text-align: center; }
+        .icon { font-size: 60px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); }
+        
+        /* ゲージ類 */
+        .bars { width: 100px; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 4px; }
+        .bar-bg { width: 100%; height: 6px; background: #222; border-radius: 3px; margin: 2px 0; overflow: hidden; }
+        .hp-fill { height: 100%; background: var(--hp-color); width: 100%; transition: 0.3s; }
+        .mp-fill { height: 100%; background: var(--mp-color); width: 0%; transition: 0.3s; }
 
-        /* 配置: 敵を2体にする */
-        #e0 { top: 100px; right: 150px; font-size: 60px; }
-        #e1 { top: 180px; right: 80px; font-size: 40px; }
-        #p0 { bottom: 150px; left: 100px; font-size: 50px; }
-        #p1 { bottom: 120px; left: 200px; font-size: 50px; }
+        /* 配置 */
+        #e0 { top: 80px; right: 120px; scale: 1.8; }
+        #p0 { bottom: 130px; left: 80px; }
+        #p1 { bottom: 100px; left: 200px; }
+        #p2 { bottom: 70px; left: 320px; }
 
-        /* UI */
-        #ui { position: absolute; bottom: 0; width: 100%; height: 120px; background: rgba(20,20,30,0.9); display: flex; }
-        .log { flex: 1; padding: 10px; font-size: 12px; border-right: 1px solid #444; overflow-y: scroll; }
-        .controls { width: 300px; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
-        button { background: #333; color: white; border: 1px solid #666; cursor: pointer; }
-        button:hover { background: #555; }
+        /* コマンドパネル */
+        #ui-panel { 
+            width: 800px; background: var(--panel-bg); display: flex; 
+            padding: 15px; border-top: 2px solid #444; box-sizing: border-box; gap: 10px;
+        }
+        .unit-command { flex: 1; background: #151520; padding: 10px; border-radius: 8px; border: 1px solid #333; }
+        .unit-name { font-size: 12px; color: #888; margin-bottom: 5px; }
+        
+        select { 
+            width: 100%; background: #222; color: #fff; border: 1px solid #444; 
+            padding: 5px; border-radius: 4px; font-size: 13px; outline: none;
+        }
+
+        #action-btn { 
+            width: 120px; background: #e74c3c; color: #fff; border: none; 
+            border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 18px;
+            transition: 0.2s; box-shadow: 0 4px 0 #c0392b;
+        }
+        #action-btn:active { transform: translateY(4px); box-shadow: none; }
+        #action-btn:disabled { background: #555; box-shadow: none; cursor: not-allowed; }
+
+        /* ログ */
+        #log { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; font-size: 14px; color: #00d4ff; border: 1px solid #00d4ff; }
     </style>
 </head>
 <body>
 
-<div id="world">
-    <div id="cut-in">黒 閃 ！！</div>
-    
-    <div id="e0" class="char"><div class="hp-outer"><div id="hp-e0" class="hp-inner"></div></div>🌋</div>
-    <div id="e1" class="char"><div class="hp-outer"><div id="hp-e1" class="hp-inner"></div></div>👻</div>
-
-    <div id="p0" class="char"><div class="hp-outer"><div id="hp-p0" class="hp-inner"></div></div>🤜</div>
-    <div id="p1" class="char"><div class="hp-outer"><div id="hp-p1" class="hp-inner"></div></div>💉</div>
-
-    <div id="ui">
-        <div id="log-box" class="log">バトル開始！ターゲットを選んで攻撃。</div>
-        <div class="controls">
-            <select id="target-select"><option value="e0">敵A (大)</option><option value="e1">敵B (小)</option></select>
-            <button onclick="playTurn('strike')">通常打撃</button>
-            <button onclick="playTurn('ultimate')" style="background: #a00;">必殺技 (MP100)</button>
+<div id="game-container">
+    <div id="log">作戦を決定せよ</div>
+    <div id="e0" class="char">
+        <div class="bars"><div class="bar-bg"><div id="hp-e0" class="hp-fill"></div></div></div>
+        <div class="icon">🌋</div>
+    </div>
+    <div id="p0" class="char">
+        <div class="bars">
+            <div class="bar-bg"><div id="hp-p0" class="hp-fill"></div></div>
+            <div class="bar-bg"><div id="mp-p0" class="mp-inner" style="height:100%; width:0%; background:var(--mp-color); transition:0.3s;"></div></div>
         </div>
+        <div class="icon">🤜</div>
+    </div>
+    <div id="p1" class="char">
+        <div class="bars">
+            <div class="bar-bg"><div id="hp-p1" class="hp-fill"></div></div>
+            <div class="bar-bg"><div id="mp-p1" class="mp-inner" style="height:100%; width:0%; background:var(--mp-color); transition:0.3s;"></div></div>
+        </div>
+        <div class="icon">👓</div>
+    </div>
+    <div id="p2" class="char">
+        <div class="bars">
+            <div class="bar-bg"><div id="hp-p2" class="hp-fill"></div></div>
+            <div class="bar-bg"><div id="mp-p2" class="mp-inner" style="height:100%; width:0%; background:var(--mp-color); transition:0.3s;"></div></div>
+        </div>
+        <div class="icon">🏥</div>
     </div>
 </div>
 
+<div id="ui-panel">
+    <div class="unit-command">
+        <div class="unit-name">アタッカー</div>
+        <select id="sel0">
+            <option value="atk">通常：呪撃 (+20MP)</option>
+            <option value="skill">スキル：黒閃 (30MP)</option>
+            <option value="ult">奥義：径庭拳 (100MP)</option>
+        </select>
+    </div>
+    <div class="unit-command">
+        <div class="unit-name">バッファー</div>
+        <select id="sel1">
+            <option value="atk">通常：呪撃 (+20MP)</option>
+            <option value="buff">スキル：戦意 (40MP)</option>
+        </select>
+    </div>
+    <div class="unit-command">
+        <div class="unit-name">ヒーラー</div>
+        <select id="sel2">
+            <option value="atk">通常：呪撃 (+20MP)</option>
+            <option value="heal">スキル：反転 (50MP)</option>
+        </select>
+    </div>
+    <button id="action-btn" onclick="startTurn()">祓 払</button>
+</div>
+
 <script>
-    let mp = 0;
-    let enemyHPs = { e0: 500, e1: 200 };
-
-    async function playTurn(type) {
-        const targetId = document.getElementById('target-select').value;
-        const logBox = document.getElementById('log-box');
-        
-        if (type === 'ultimate') {
-            if (mp < 100) return alert("呪力が足りない！");
-            // カットイン演出
-            const ci = document.getElementById('cut-in');
-            ci.classList.add('cut-in-active');
-            await new Promise(r => setTimeout(r, 800));
-            ci.classList.remove('cut-in-active');
-            
-            enemyHPs[targetId] -= 200;
-            mp = 0;
-            logBox.innerHTML += `<div>必殺技！${targetId}に200ダメージ！</div>`;
-        } else {
-            enemyHPs[targetId] -= 40;
-            mp = Math.min(100, mp + 30);
-            logBox.innerHTML += `<div>打撃！${targetId}に40ダメージ！</div>`;
+    class Unit {
+        constructor(id, name, hp, mp) {
+            this.id = id; this.name = name;
+            this.hp = hp; this.maxHp = hp;
+            this.mp = mp; this.buff = 1;
         }
-
-        // 画面揺らし
-        document.getElementById('world').style.animation = "shake 0.2s";
-        setTimeout(() => document.getElementById('world').style.animation = "", 200);
-
-        update();
+        update() {
+            document.getElementById(`hp-${this.id}`).style.width = (this.hp/this.maxHp*100) + "%";
+            const m = document.getElementById(`mp-${this.id}`);
+            if(m) m.style.width = this.mp + "%";
+        }
     }
 
-    function update() {
-        for (let id in enemyHPs) {
-            const el = document.getElementById(`hp-${id}`);
-            if (el) el.style.width = (Math.max(0, enemyHPs[id]) / (id === 'e0' ? 5 : 2)) + "%";
-            if (enemyHPs[id] <= 0) document.getElementById(id).style.opacity = "0.3";
+    const ps = [new Unit("p0", "虎杖", 150, 0), new Unit("p1", "七海", 120, 0), new Unit("p2", "家入", 100, 0)];
+    const boss = new Unit("e0", "特級", 1500, 0);
+
+    const log = (m) => document.getElementById('log').innerText = m;
+
+    async function startTurn() {
+        document.getElementById('action-btn').disabled = true;
+
+        for(let i=0; i<3; i++) {
+            const move = document.getElementById(`sel${i}`).value;
+            const cost = {atk:0, skill:30, ult:100, buff:40, heal:50}[move];
+            
+            if(ps[i].mp < cost) {
+                log(`${ps[i].name}の呪力が足りない！`);
+                continue;
+            }
+            ps[i].mp -= cost;
+            await execute(ps[i], move);
         }
+
+        if(boss.hp > 0) await enemyTurn();
+        document.getElementById('action-btn').disabled = false;
+        log("作戦を決定せよ");
+    }
+
+    async function execute(p, move) {
+        log(`${p.name}の行動！`);
+        const el = document.getElementById(p.id);
+        
+        if(move === 'atk' || move === 'skill' || move === 'ult') {
+            el.style.transform = "translateX(60px)";
+            let d = {atk:40, skill:100, ult:400}[move];
+            d *= p.buff; p.buff = 1;
+            boss.hp = Math.max(0, boss.hp - d);
+            if(move === 'atk') p.mp = Math.min(100, p.mp + 25);
+            boss.update();
+        } else if(move === 'buff') {
+            el.style.transform = "translateY(-20px)";
+            ps[0].buff = 2.0;
+        } else if(move === 'heal') {
+            el.style.transform = "translateY(-20px)";
+            ps.forEach(u => { u.hp = Math.min(u.maxHp, u.hp + 50); u.update(); });
+        }
+        
+        p.update();
+        await new Promise(r => setTimeout(r, 600));
+        el.style.transform = "";
+    }
+
+    async function enemyTurn() {
+        log("敵の攻撃！");
+        const target = ps[Math.floor(Math.random()*3)];
+        document.getElementById('e0').style.transform = "translateX(-80px)";
+        target.hp = Math.max(0, target.hp - 35);
+        target.update();
+        await new Promise(r => setTimeout(r, 600));
+        document.getElementById('e0').style.transform = "";
     }
 </script>
 </body>
