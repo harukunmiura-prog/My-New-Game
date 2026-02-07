@@ -2,188 +2,261 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Jujutsu: Stone & Battle Loop</title>
+    <title>Survival: Ultimate Skills</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; text-align: center; }
-        .scene { display: none; width: 800px; height: 550px; margin: 10px auto; border: 4px solid #333; position: relative; background: #0a0a0f; }
-        .active { display: flex; flex-direction: column; }
-        
-        /* 共通UI */
-        .status-header { background: #222; padding: 10px; display: flex; justify-content: space-around; font-weight: bold; }
-        .ishi-count { color: #f1c40f; font-size: 20px; }
-        .menu-btn { padding: 12px 25px; margin: 10px; cursor: pointer; background: #e74c3c; border: none; color: white; border-radius: 5px; }
-
-        /* キャラカード */
-        .character-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px; }
-        .char-card { border: 2px solid #444; padding: 10px; background: #222; cursor: pointer; border-radius: 5px; }
-        .char-card.selected { border-color: #00d4ff; background: #003344; }
-
-        /* バトル */
-        #battle-field { height: 320px; position: relative; background: #111; border-bottom: 2px solid #444; }
-        .unit { position: absolute; transition: 0.3s; width: 100px; }
-        .bar-container { width: 80px; height: 6px; background: #333; margin: 2px auto; border-radius: 3px; overflow: hidden; }
-        .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
-        .mp-fill { height: 100%; background: #00d4ff; width: 0%; transition: 0.3s; }
-        
-        #ui-bottom { height: 200px; background: #1a1a1a; display: grid; grid-template-columns: repeat(3, 1fr) 120px; gap: 10px; padding: 10px; }
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        canvas { background: #111; border: 4px solid #444; display: none; }
+        .screen { text-align: center; background: rgba(20,20,20,0.95); padding: 40px; border-radius: 15px; border: 2px solid #555; width: 500px; box-shadow: 0 0 50px #000; }
+        .btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
+        button { padding: 15px; cursor: pointer; background: #333; color: white; border: 1px solid #777; border-radius: 5px; font-size: 16px; transition: 0.2s; }
+        button:hover { background: #00ffcc; color: #000; font-weight: bold; }
+        #lvNotice { position: absolute; top: 40%; font-size: 50px; font-weight: bold; color: #ffff00; text-shadow: 0 0 20px #ff0000; display: none; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div class="status-header">
-        <div>呪術高専 管理画面</div>
-        <div class="ishi-count">所持イシ: <span id="ishi-val">5</span> 個</div>
-    </div>
-
-    <div id="scene-lobby" class="scene active">
-        <h1>ロビー</h1>
-        <div style="margin-top: 100px;">
-            <button class="menu-btn" onclick="changeScene('scene-gacha')">ガチャ (1個消費)</button>
-            <button class="menu-btn" onclick="changeScene('scene-party')">チーム編成</button>
-            <button class="menu-btn" style="background:#2ecc71;" onclick="startBattle()">任務開始 (勝利で1個獲得)</button>
+    <div id="lobby" class="screen">
+        <h1 style="color:#00ffcc;">ULTIMATE SURVIVAL</h1>
+        <div class="btn-grid">
+            <button onclick="pickChar('REVENGE')">リベンジ<br><small>E: 自己回復＋加速</small></button>
+            <button onclick="pickChar('STRONG')">ストロング<br><small>E: 5秒間 攻撃1.5倍</small></button>
+            <button onclick="pickChar('TANK')">タンク<br><small>E: 1秒間 完全無敵</small></button>
+            <button onclick="pickChar('CRITICAL')">クリティカル<br><small>E: 超巨大黒閃</small></button>
+            <button onclick="pickChar('MAGICIAN')">マジシャン<br><small>E: 全画面氷結</small></button>
         </div>
     </div>
 
-    <div id="scene-gacha" class="scene">
-        <button onclick="changeScene('scene-lobby')">戻る</button>
-        <h2>特級ガチャ</h2>
-        <div id="gacha-res" style="font-size: 80px; margin: 40px;">？</div>
-        <button class="menu-btn" onclick="pullGacha()">イシを1個使って引く</button>
-    </div>
-
-    <div id="scene-party" class="scene">
-        <button onclick="changeScene('scene-lobby')">戻る</button>
-        <h2>チーム編成 (3人選択)</h2>
-        <div id="my-chars" class="character-list"></div>
-    </div>
-
-    <div id="scene-battle" class="scene">
-        <div id="battle-field">
-            <div id="boss" class="unit" style="top:40px; right:80px; scale:1.4;">
-                <div class="bar-container"><div id="hp-e" class="hp-fill"></div></div>
-                <div style="font-size:60px">🌋</div>
-            </div>
-            <div id="p-units"></div>
-        </div>
-        <div id="ui-bottom">
-            <div id="cmd-0"></div><div id="cmd-1"></div><div id="cmd-2"></div>
-            <button id="go-btn" style="background:#e74c3c; color:white; border:none;" onclick="runBattleTurn()">祓払</button>
+    <div id="itemSelect" class="screen" style="display:none;">
+        <h1 id="itemTitle" style="color:#ffff00;">LEVEL UP!</h1>
+        <div class="btn-grid">
+            <button onclick="pickItem('Boots')">神速の靴</button>
+            <button onclick="pickItem('Sword')">覇王の剣</button>
+            <button onclick="pickItem('Heart')">聖なる肉</button>
+            <button onclick="pickItem('Clock')">時の砂時計</button>
         </div>
     </div>
 
-<script>
-    const allChars = [
-        { id: 'i', name: '虎杖', emoji: '🤜', hp: 150 },
-        { id: 'g', name: '五条', emoji: '😎', hp: 400 },
-        { id: 'f', name: '伏黒', emoji: '🐺', hp: 120 },
-        { id: 'n', name: '七海', emoji: '📏', hp: 140 }
-    ];
+    <div id="lvNotice">LEVEL UP!!</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-    let ishi = 5;
-    let inventory = ['i']; // 最初は虎杖のみ
-    let party = [];
-    let battleUnits = []; // バトル中のステータス用
-    let bossHP = 1000;
-
-    function updateIshi() { document.getElementById('ishi-val').innerText = ishi; }
-
-    function changeScene(id) {
-        document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(id === 'scene-party') renderParty();
-    }
-
-    // --- ガチャ ---
-    function pullGacha() {
-        if(ishi < 1) return alert("イシが足りません！");
-        ishi--; updateIshi();
-        const res = allChars[Math.floor(Math.random()*allChars.length)];
-        document.getElementById('gacha-res').innerText = res.emoji;
-        if(!inventory.includes(res.id)) inventory.push(res.id);
-    }
-
-    // --- 編成 ---
-    function renderParty() {
-        const list = document.getElementById('my-chars');
-        list.innerHTML = '';
-        inventory.forEach(id => {
-            const data = allChars.find(c => c.id === id);
-            const card = document.createElement('div');
-            card.className = `char-card ${party.includes(id) ? 'selected' : ''}`;
-            card.innerHTML = `<div style="font-size:30px">${data.emoji}</div>${data.name}`;
-            card.onclick = () => {
-                if(party.includes(id)) party = party.filter(p => p !== id);
-                else if(party.length < 3) party.push(id);
-                renderParty();
-            };
-            list.appendChild(card);
-        });
-    }
-
-    // --- バトル ---
-    function startBattle() {
-        if(party.length === 0) return alert("編成でキャラを選んでください！");
-        bossHP = 1000;
-        battleUnits = party.map(id => {
-            const data = allChars.find(c => c.id === id);
-            return { ...data, curHP: data.hp, mp: 0 };
-        });
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
-        changeScene('scene-battle');
-        renderBattle();
-    }
+        let gameState = 'LOBBY';
+        let player = null, enemies = [], keys = {}, wave = 1, killCount = 0, shake = 0, enemyTimer = 0;
 
-    function renderBattle() {
-        const field = document.getElementById('p-units');
-        field.innerHTML = '';
-        battleUnits.forEach((u, i) => {
-            field.innerHTML += `
-                <div id="u-${i}" class="unit" style="bottom:${100 - i*30}px; left:${60 + i*110}px;">
-                    <div class="bar-container"><div id="hp-p${i}" class="hp-fill" style="width:${u.curHP/u.hp*100}%"></div></div>
-                    <div class="bar-container"><div id="mp-p${i}" class="mp-fill" style="width:${u.mp}%"></div></div>
-                    <div style="font-size:50px">${u.emoji}</div>
-                </div>`;
-            document.getElementById(`cmd-${i}`).innerHTML = `
-                <div style="font-size:12px">${u.name}</div>
-                <select id="sel-${i}">
-                    <option value="atk">呪撃 (+20MP)</option>
-                    <option value="skill" ${u.mp < 50 ? 'disabled' : ''}>術式 (50MP)</option>
-                </select>`;
+        const JOBS = {
+            REVENGE:  { hp: 150, atk: 25, color: '#FF4500', cd: 250, range: 130 },
+            STRONG:   { hp: 200, atk: 70, color: '#8B0000', cd: 800, range: 220 },
+            TANK:     { hp: 600, atk: 20, color: '#708090', cd: 350, range: 110 },
+            CRITICAL: { hp: 120, atk: 30, color: '#FFD700', cd: 200, range: 130 },
+            MAGICIAN: { hp: 130, atk: 20, color: '#9400D3', cd: 300, range: 140 }
+        };
+
+        function playSound(freq, type, dur, vol=0.1) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+                o.type = type; o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                g.gain.setValueAtTime(vol, audioCtx.currentTime);
+                g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + dur);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + dur);
+            } catch(e) {}
+        }
+
+        function pickChar(job) {
+            player = { ...JOBS[job], job, x: 400, y: 300, maxHp: JOBS[job].hp, lastAttack: 0, lastSkill: 0, speed: 7, level: 1, skillCD: 8000, invinc: 0, powerUp: 0 };
+            document.getElementById('lobby').style.display = 'none';
+            document.getElementById('itemSelect').style.display = 'block';
+            playSound(500, 'sine', 0.2);
+        }
+
+        function pickItem(item) {
+            if (item === 'Boots') player.speed += 2;
+            if (item === 'Sword') player.atk += 40;
+            if (item === 'Heart') player.hp = player.maxHp;
+            if (item === 'Clock') player.skillCD *= 0.75;
+            document.getElementById('itemSelect').style.display = 'none';
+            canvas.style.display = 'block';
+            gameState = 'BATTLE';
+            playSound(800, 'sine', 0.2);
+        }
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if(gameState === 'BATTLE' && e.code === 'Space') attack();
+            if(gameState === 'BATTLE' && e.code === 'KeyE') useSkill();
         });
-        document.getElementById('hp-e').style.width = (bossHP/10) + "%";
-    }
+        window.addEventListener('keyup', e => keys[e.code] = false);
 
-    async function runBattleTurn() {
-        document.getElementById('go-btn').disabled = true;
-        for(let i=0; i<battleUnits.length; i++) {
-            const u = battleUnits[i];
-            const move = document.getElementById(`sel-${i}`).value;
-            let dmg = 0;
-
-            if(move === 'atk') {
-                dmg = 40; u.mp = Math.min(100, u.mp + 20);
-            } else {
-                dmg = 150; u.mp -= 50;
+        function drawBlackFlash(x, y, scale=1) {
+            ctx.strokeStyle = "red"; ctx.lineWidth = 6 * scale;
+            ctx.beginPath();
+            for(let i=0; i<12; i++) {
+                ctx.lineTo(x + (Math.random()-0.5)*250*scale, y + (Math.random()-0.5)*250*scale);
             }
-            
-            bossHP = Math.max(0, bossHP - dmg);
-            document.getElementById(`u-${i}`).style.transform = "translateX(40px)";
-            renderBattle();
-            await new Promise(r => setTimeout(r, 400));
-            document.getElementById(`u-${i}`).style.transform = "";
+            ctx.stroke();
+            ctx.strokeStyle = "black"; ctx.lineWidth = 3 * scale;
+            ctx.stroke();
         }
 
-        if(bossHP <= 0) {
-            alert("勝利！イシを1個獲得しました！");
-            ishi++; updateIshi();
-            changeScene('scene-lobby');
-        } else {
-            alert("敵の攻撃！全員に20ダメージ！");
-            battleUnits.forEach(u => u.curHP = Math.max(0, u.curHP - 20));
-            renderBattle();
+        function attack() {
+            const now = Date.now();
+            if(now - player.lastAttack < player.cd) return;
+            player.lastAttack = now;
+            player.isEffect = true;
+            let hit = false;
+            let currentAtk = player.powerUp > 0 ? player.atk * 1.5 : player.atk;
+
+            enemies.forEach(en => {
+                const dist = Math.hypot(en.x - player.x, en.y - player.y);
+                if(dist < player.range) {
+                    let d = currentAtk;
+                    if(player.job === 'CRITICAL' && Math.random() < 0.2) { 
+                        d *= 4; player.isCritHit = true; shake = 25; 
+                        playSound(50, 'sawtooth', 0.4, 0.5); 
+                    }
+                    en.hp -= d; hit = true;
+                    const a = Math.atan2(en.y - player.y, en.x - player.x);
+                    en.x += Math.cos(a) * 60; en.y += Math.sin(a) * 60;
+                }
+            });
+            playSound(hit ? 100 : 400, hit ? 'square' : 'sine', 0.1);
+            setTimeout(() => { player.isEffect = false; player.isCritHit = false; }, 200);
         }
-        document.getElementById('go-btn').disabled = false;
-    }
-</script>
+
+        function useSkill() {
+            const now = Date.now();
+            if(now - player.lastSkill < player.skillCD) return;
+            player.lastSkill = now;
+            
+            if(player.job === 'TANK') {
+                player.invinc = 60; // 1秒 (60fps)
+                playSound(200, 'sine', 0.5, 0.5);
+            } else if(player.job === 'STRONG') {
+                player.powerUp = 300; // 5秒
+                playSound(150, 'sawtooth', 0.5, 0.4);
+            } else if(player.job === 'CRITICAL') {
+                shake = 50;
+                playSound(40, 'sawtooth', 0.8, 0.6);
+                player.isHugeFlash = true;
+                enemies.forEach(en => {
+                    const d = Math.hypot(en.x - player.x, en.y - player.y);
+                    if(d < 400) en.hp -= player.atk * 10;
+                });
+                setTimeout(() => player.isHugeFlash = false, 300);
+            } else if(player.job === 'MAGICIAN') {
+                enemies.forEach(en => en.frozen = 240);
+                playSound(800, 'sine', 1, 0.3);
+            } else if(player.job === 'REVENGE') {
+                player.hp = Math.min(player.maxHp, player.hp + 30);
+                player.speed += 5;
+                setTimeout(() => player.speed -= 5, 3000);
+                playSound(440, 'sine', 0.3, 0.4);
+            }
+        }
+
+        function createEnemy(isBoss) {
+            if (enemies.filter(e => !e.isBoss).length > 15 && !isBoss) return;
+            const a = Math.random() * Math.PI * 2;
+            enemies.push({ 
+                x: player.x + Math.cos(a) * 500, y: player.y + Math.sin(a) * 500, 
+                hp: isBoss ? 350 + wave*100 : 40 + wave*5, 
+                maxHp: isBoss ? 350 + wave*100 : 40 + wave*5,
+                speed: isBoss ? 1.2 : 1.5 + Math.random(),
+                isBoss, frozen: 0, size: isBoss ? 100 : 35
+            });
+        }
+
+        function startLevelUpSequence() {
+            gameState = 'WAIT';
+            document.getElementById('lvNotice').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('lvNotice').style.display = 'none';
+                canvas.style.display = 'none';
+                document.getElementById('itemSelect').style.display = 'block';
+                player.level++; wave++;
+            }, 1500);
+        }
+
+        function update() {
+            if(gameState === 'BATTLE') {
+                if (keys['KeyW']) player.y -= player.speed; if (keys['KeyS']) player.y += player.speed;
+                if (keys['KeyA']) player.x -= player.speed; if (keys['KeyD']) player.x += player.speed;
+                if (player.x < 20) player.x = 20; if (player.x > 780) player.x = 780;
+                if (player.y < 20) player.y = 20; if (player.y > 580) player.y = 580;
+
+                enemyTimer++;
+                if(enemyTimer > 100) { createEnemy(false); enemyTimer = 0; }
+
+                ctx.clearRect(0, 0, 800, 600);
+                ctx.save();
+                if(shake > 0) { ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake); shake *= 0.9; }
+
+                // プレイヤー描画
+                if(player.powerUp > 0) { // StrongのE演出
+                    player.powerUp--;
+                    ctx.shadowBlur = 20; ctx.shadowColor = "red";
+                    ctx.fillStyle = "white";
+                } else {
+                    ctx.fillStyle = player.color;
+                }
+                
+                if(player.invinc > 0) { // TankのE演出
+                    player.invinc--;
+                    ctx.strokeStyle = "cyan"; ctx.lineWidth = 5;
+                    ctx.strokeRect(player.x-25, player.y-25, 50, 50);
+                }
+                
+                ctx.fillRect(player.x-20, player.y-20, 40, 40);
+                ctx.shadowBlur = 0;
+
+                // スキルエフェクト：巨大黒閃
+                if(player.isHugeFlash) drawBlackFlash(player.x, player.y, 3);
+
+                // 通常攻撃/黒閃
+                if(player.isEffect) {
+                    if (player.isCritHit) drawBlackFlash(player.x, player.y, 1);
+                    else {
+                        ctx.strokeStyle = "rgba(255,255,255,0.8)";
+                        ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(player.x, player.y, player.range, 0, Math.PI*2); ctx.stroke();
+                    }
+                }
+
+                enemies.forEach((en, i) => {
+                    if(en.frozen > 0) { en.frozen--; ctx.fillStyle = "#00ffff"; }
+                    else {
+                        const a = Math.atan2(player.y - en.y, player.x - en.x);
+                        en.x += Math.cos(a) * en.speed; en.y += Math.sin(a) * en.speed;
+                        ctx.fillStyle = en.isBoss ? "#ff0066" : "#55ff55";
+                    }
+                    ctx.fillRect(en.x - en.size/2, en.y - en.size/2, en.size, en.size);
+                    if(Math.hypot(en.x - player.x, en.y - player.y) < en.size/2 + 15 && player.invinc <= 0) {
+                        player.hp -= en.isBoss ? 1 : 0.3;
+                        if(player.job === 'REVENGE') player.atk += 0.2;
+                    }
+                    if(en.hp <= 0) {
+                        if(en.isBoss) startLevelUpSequence();
+                        enemies.splice(i, 1); killCount++;
+                        if(killCount % 10 === 0 && !enemies.some(e=>e.isBoss)) createEnemy(true);
+                    }
+                });
+
+                ctx.restore();
+                // UI
+                const cd = Math.max(0, (player.skillCD - (Date.now() - player.lastSkill)) / 1000).toFixed(1);
+                ctx.fillStyle = "#00ffcc"; ctx.font = "bold 18px Arial";
+                ctx.fillText(`HP:${Math.ceil(player.hp)}  SKILL(E):${cd}s  SCORE:${killCount}`, 20, 40);
+                if(player.hp <= 0) { alert("GAME OVER"); location.reload(); }
+            } else if (gameState === 'WAIT') {
+                ctx.fillStyle = "rgba(0,0,0,0.05)"; ctx.fillRect(0,0,800,600);
+            }
+            requestAnimationFrame(update);
+        }
+        update();
+    </script>
 </body>
 </html>
